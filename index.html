@@ -233,8 +233,8 @@
                         YW
                     </div>
                     <div>
-                        <p class="text-sm font-bold text-slate-700">Yuyun Wulandari</p>
-                        <p class="text-xs text-slate-500">Pranata Humas</p>
+                        <p class="text-sm font-bold text-slate-700">Developed by @agung_sde</p>
+                        <p class="text-xs text-slate-500">for Wulandari Ahdiansyah</p>
                     </div>
                 </div>
             </div>
@@ -253,7 +253,7 @@
                 <div class="mb-6 lg:mb-8 text-center lg:text-left">
                     <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">My Mine Gueh Wulandari
                     </h1>
-                    <p class="text-slate-500 mt-1 text-sm sm:text-base">Catat aktivitas hari ini ya sayang, i love u.</p>
+                    <p class="text-slate-500 mt-1 text-sm sm:text-base">Catat aktivitas hari ini ya sayang, semangat. i love u!</p>
                 </div>
 
                 <div
@@ -605,7 +605,7 @@
 
     <script>
         // URL Web App Google Apps Script Anda (WAJIB DIISI)
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycby7yHjymd10hFa4HQddlVMOXU_-7u4OeW6P1ISLsOlx8QYMhJMVVxXwZx0TTu9hiRU/exec";
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxvuACqDsw8lTPQvFXPTbVpFot6vjlMd-JUkBHyMmCVZ_Jez0Fhq9F5Sbo84s2AdAo/exec";
 
         const dummySKP = [
             "Analisis data informasi media & masyarakat",
@@ -989,10 +989,17 @@
 
         // --- DASHBOARD LOGIC ---
         let dummyDataEkinerja = JSON.parse(localStorage.getItem('ekinerja_data')) || [
-            { tanggal: '2026-07-01', skp: 'Penyusunan berita media daring', deskripsi: 'Menulis rilis berita kunjungan kerja', kuantitas: 1, evidence: '#', type: 'link' },
-            { tanggal: '2026-07-05', skp: 'Pengolahan konten media', deskripsi: 'Membuat desain infografis', kuantitas: 2, evidence: '#', type: 'file' },
-            { tanggal: '2026-06-15', skp: 'Penyusunan naskah pidato', deskripsi: 'Pidato pimpinan untuk acara', kuantitas: 1, evidence: '#', type: 'file' },
+            { tanggal: '2026-07-01', skp: 'Penyusunan berita media daring', deskripsi: 'Menulis rilis berita kunjungan kerja', kuantitas: 1, evidence: '#', type: 'link', tipe_kerja: 'WFA', jam_masuk: '08:00', jam_pulang: '16:00' },
+            { tanggal: '2026-07-05', skp: 'Pengolahan konten media', deskripsi: 'Membuat desain infografis', kuantitas: 2, evidence: '#', type: 'file', tipe_kerja: 'WFO', jam_masuk: '', jam_pulang: '' },
+            { tanggal: '2026-06-15', skp: 'Penyusunan naskah pidato', deskripsi: 'Pidato pimpinan untuk acara', kuantitas: 1, evidence: '#', type: 'file', tipe_kerja: 'WFA', jam_masuk: '07:30', jam_pulang: '15:30' },
         ];
+
+        function formatTimeString(t) {
+            if (!t) return '-';
+            t = String(t);
+            const m = t.match(/\b\d{2}:\d{2}\b/);
+            return m ? m[0] : t.substring(0, 5);
+        }
 
         let currentData = [];
 
@@ -1114,9 +1121,9 @@
                 tr.className = "border-b border-slate-100 hover:bg-slate-50/50 transition-colors";
                 tr.innerHTML = `
                     <td class="px-4 py-3 align-top text-center font-medium">${index + 1}</td>
-                    <td class="px-4 py-3 align-top font-medium">${item.tanggal}</td>
-                    <td class="px-4 py-3 align-top text-center">${item.jam_masuk}</td>
-                    <td class="px-4 py-3 align-top text-center">${item.jam_pulang}</td>
+                    <td class="px-4 py-3 align-top font-medium whitespace-nowrap">${item.tanggal}</td>
+                    <td class="px-4 py-3 align-top text-center">${formatTimeString(item.jam_masuk)}</td>
+                    <td class="px-4 py-3 align-top text-center">${formatTimeString(item.jam_pulang)}</td>
                     <td class="px-4 py-3 align-top font-medium text-slate-800">${item.skp}</td>
                     <td class="px-4 py-3 align-top text-slate-500">${item.deskripsi}</td>
                 `;
@@ -1302,8 +1309,8 @@
                     tableBody.push([
                         { content: no++, styles: { halign: 'center', valign: 'middle' } },
                         { content: item.tanggal, styles: { halign: 'center', valign: 'middle' } },
-                        { content: item.jam_masuk, styles: { halign: 'center', valign: 'middle' } },
-                        { content: item.jam_pulang, styles: { halign: 'center', valign: 'middle' } },
+                        { content: formatTimeString(item.jam_masuk), styles: { halign: 'center', valign: 'middle' } },
+                        { content: formatTimeString(item.jam_pulang), styles: { halign: 'center', valign: 'middle' } },
                         item.skp,
                         item.deskripsi
                     ]);
