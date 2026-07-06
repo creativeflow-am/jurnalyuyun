@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jurnal Yuyun</title>
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
+    <link rel="apple-touch-icon" href="logo.svg">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        indigo: tailwind.colors.blue,
+                        purple: tailwind.colors.slate,
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- jsPDF Library for Client-side PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #f8fafc;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.3s;
+        }
+
+
+        .input-field {
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            transform: translateY(-1px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+
+
+        /* Toast Animation */
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(100%) translateX(-50%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) translateX(-50%);
+            }
+        }
+
+        .toast-enter {
+            animation: slideUp 0.3s ease-out forwards;
+        }
+
+        /* Safe area padding for mobile bottom nav */
+        .pb-safe {
+            padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+        }
+
+        /* Print Styles (Download PDF Simulation) */
+        @media print {
+            body {
+                background: white !important;
+                overflow: visible !important;
+            }
+
+            #sidebar,
+            nav.lg\\:hidden,
+            #toast-container,
+            .absolute,
+            button,
+            .border-b.border-slate-200\\/80,
+            #mobile-overlay,
+            header {
+                display: none !important;
+            }
+
+            #section-input {
+                display: none !important;
+            }
+
+            #section-dashboard {
+                display: block !important;
+                width: 100% !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .glass-panel {
+                box-shadow: none !important;
+                border: none !important;
+                background: transparent !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            .overflow-y-auto {
+                overflow: visible !important;
+                padding: 0 !important;
+            }
+
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+
+            th,
+            td {
+                border: 1px solid #94a3b8 !important;
+                padding: 12px !important;
+                color: black !important;
+            }
+
+            th {
+                background-color: #f1f5f9 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            a {
+                text-decoration: none !important;
+                color: black !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 antialiased overflow-hidden flex h-screen">
+
+    <!-- Desktop Sidebar (Hidden on mobile) -->
+    <aside id="sidebar"
+        class="hidden lg:flex flex-col bg-white border-r border-slate-200 w-72 h-screen flex-shrink-0 z-30 shadow-none">
+        <div class="p-6 flex flex-col h-full">
+            <div class="flex items-center gap-3 mb-8">
+                <div
+                    class="h-11 w-11 rounded-xl shadow-lg shadow-indigo-200 overflow-hidden border-2 border-indigo-100 flex-shrink-0 bg-white">
+                    <img src="logo.svg" alt="Logo Jurnal Yuyun" class="h-full w-full object-cover">
+                </div>
+                <div>
+                    <h2
+                        class="text-xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-indigo-700">
+                        Jurnal Yuyun</h2>
+                    <p class="text-xs text-slate-500 font-medium">Humas & Protokol</p>
+                </div>
+            </div>
+
+            <nav class="space-y-2 flex-grow">
+                <button onclick="switchTab('input')" id="nav-input"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl bg-indigo-50 text-indigo-700 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                            d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                    Input Jurnal
+                </button>
+                <button onclick="switchTab('dashboard')" id="nav-dashboard"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
+                        <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
+                    </svg>
+                    Dashboard Keseluruhan
+                </button>
+                <button onclick="switchTab('dashboard-wfa')" id="nav-dashboard-wfa"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    Dashboard WFA
+                </button>
+            </nav>
+
+            <div class="mt-auto pt-6 border-t border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-bold border border-indigo-200">
+                        YW
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-slate-700">Yuyun Wulandari</p>
+                        <p class="text-xs text-slate-500">Pranata Humas</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex flex-col h-screen overflow-hidden relative bg-slate-50 lg:bg-transparent">
+
+
+        <!-- Scrollable Content Area -->
+        <div class="flex-grow overflow-y-auto p-4 pb-24 sm:p-8 z-10">
+
+            <!-- SECTION 1: INPUT JURNAL -->
+            <div id="section-input" class="fade-in max-w-2xl mx-auto">
+                <div class="mb-6 lg:mb-8 text-center lg:text-left">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">Formulir E-Kinerja
+                    </h1>
+                    <p class="text-slate-500 mt-1 text-sm sm:text-base">Catat aktivitas kehumasan Anda hari ini.</p>
+                </div>
+
+                <div
+                    class="glass-panel p-5 sm:p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/95 lg:bg-white/90">
+                    <form id="ekinerjaForm" onsubmit="submitForm(event)" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2 ml-1">Tanggal Kegiatan</label>
+                            <input type="date" name="tanggal" id="tanggal" required
+                                class="input-field w-full p-3.5 bg-slate-50 lg:bg-white/70 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 shadow-sm">
+                        </div>
+
+                        <!-- Toggle WFA -->
+                        <div
+                            class="flex items-center gap-3 bg-slate-50 lg:bg-white/70 border border-slate-200 p-3.5 rounded-xl">
+                            <input type="checkbox" id="isWFA" name="isWFA" onchange="toggleWFAFields()"
+                                class="w-5 h-5 text-indigo-600 rounded cursor-pointer">
+                            <label for="isWFA"
+                                class="text-sm font-semibold text-slate-700 cursor-pointer select-none">Tugas Work From
+                                Anywhere (WFA)</label>
+                        </div>
+
+                        <!-- Fields WFA -->
+                        <div id="wfaFields" class="hidden grid grid-cols-2 gap-4 fade-in">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2 ml-1">Jam Masuk</label>
+                                <input type="time" name="jamMasuk" id="jamMasuk"
+                                    class="input-field w-full p-3.5 bg-slate-50 lg:bg-white/70 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 shadow-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-2 ml-1">Jam Pulang</label>
+                                <input type="time" name="jamPulang" id="jamPulang"
+                                    class="input-field w-full p-3.5 bg-slate-50 lg:bg-white/70 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 shadow-sm">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2 ml-1">Butir Kegiatan
+                                SKP</label>
+                            <select id="butirSkp" name="butirSkp" required
+                                class="input-field w-full p-3.5 bg-slate-50 lg:bg-white/70 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 text-sm shadow-sm cursor-pointer">
+                                <option value="">-- Memuat Butir SKP... --</option>
+                            </select>
+                        </div>
+
+                        <!-- Dynamic Tasks Container -->
+                        <div id="tasksContainer" class="space-y-6">
+                            <!-- Task Block 1 -->
+                            <div class="task-block relative bg-white/70 backdrop-blur-md p-5 rounded-2xl border border-indigo-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(79,70,229,0.08)] hover:border-indigo-300 transition-all duration-300"
+                                id="task_1">
+                                <div class="flex justify-between items-center mb-3">
+                                    <h3 class="text-sm font-bold text-indigo-600">Pekerjaan #1</h3>
+                                </div>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-slate-700 mb-2 ml-1">Deskripsi
+                                            Pekerjaan / Output Spesifik</label>
+                                        <textarea name="deskripsi_1" required rows="2"
+                                            placeholder="Contoh: Menyusun naskah pidato..."
+                                            class="input-field w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 text-sm shadow-sm resize-none"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-slate-700 mb-2 ml-1">Kuantitas /
+                                            Volume Output</label>
+                                        <div class="flex items-center space-x-3">
+                                            <input type="number" name="kuantitas_1" required min="1" value="1"
+                                                class="input-field w-20 sm:w-24 p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-center text-slate-700 shadow-sm font-semibold">
+                                            <span
+                                                class="text-slate-500 text-xs sm:text-sm font-medium bg-white px-3 py-3 rounded-xl border border-slate-200/60 shadow-sm">Dokumen
+                                                / Kegiatan</span>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-3 bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                                        <label class="block text-sm font-semibold text-slate-700 ml-1">Jenis Bukti /
+                                            Evidence</label>
+                                        <div
+                                            class="flex flex-wrap gap-2 sm:gap-4 bg-slate-50 p-2 rounded-xl border border-slate-200 inline-flex w-full sm:w-auto">
+                                            <label
+                                                class="flex-1 sm:flex-none flex items-center justify-center space-x-2 cursor-pointer py-1 px-2">
+                                                <input type="radio" name="evidenceType_1" value="file" checked
+                                                    class="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                                                    onchange="toggleEvidenceType(1)">
+                                                <span
+                                                    class="text-xs sm:text-sm text-slate-700 font-medium">Dokumen</span>
+                                            </label>
+                                            <label
+                                                class="flex-1 sm:flex-none flex items-center justify-center space-x-2 cursor-pointer py-1 px-2 border-l border-slate-200 sm:border-none">
+                                                <input type="radio" name="evidenceType_1" value="link"
+                                                    class="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300"
+                                                    onchange="toggleEvidenceType(1)">
+                                                <span class="text-xs sm:text-sm text-slate-700 font-medium">Tautan
+                                                    (URL)</span>
+                                            </label>
+                                        </div>
+                                        <div id="fileArea_1"
+                                            class="relative group mt-2 block transition-all duration-300">
+                                            <div class="relative bg-slate-50 p-4 rounded-xl flex flex-col items-center justify-center border-dashed border-2 border-indigo-200 hover:border-indigo-400 hover:bg-white transition-all cursor-pointer"
+                                                onclick="document.getElementById('fileEvidence_1').click()">
+                                                <div
+                                                    class="bg-indigo-100 p-2 rounded-full mb-2 group-hover:bg-indigo-200 transition-colors">
+                                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                                        class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24"
+                                                        stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                                    </svg>
+                                                </div>
+                                                <span class="text-xs font-semibold text-slate-700"
+                                                    id="fileNameDisplay_1">Pilih File Bukti</span>
+                                                <input type="file" id="fileEvidence_1" name="fileEvidence_1"
+                                                    class="hidden" onchange="updateFileName(this, 1)">
+                                            </div>
+                                        </div>
+                                        <div id="linkArea_1" class="hidden mt-2 transition-all duration-300">
+                                            <input type="url" name="tautan_1" id="linkEvidence_1"
+                                                placeholder="https://drive.google.com/..."
+                                                class="input-field w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 shadow-sm text-sm">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="addTaskRow()"
+                            class="mt-4 w-full bg-indigo-50/50 hover:bg-indigo-100 border-2 border-dashed border-indigo-200 hover:border-indigo-400 text-indigo-700 font-bold py-3.5 px-6 rounded-2xl transition-all flex justify-center items-center gap-2 text-sm shadow-sm group">
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5 group-hover:scale-110 transition-transform" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            Tambah Pekerjaan Lain
+                        </button>
+
+                        <button type="submit" id="btnSubmit"
+                            class="mt-6 w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_25px_rgba(79,70,229,0.6)] transform hover:-translate-y-0.5 flex justify-center items-center gap-2 group">
+                            <span>Simpan Jurnal</span>
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                class="h-5 w-5 transform group-hover:translate-x-1 transition-transform"
+                                viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- SECTION 2: DASHBOARD LAPORAN -->
+            <div id="section-dashboard" class="hidden fade-in max-w-6xl mx-auto">
+                <div
+                    class="mb-6 lg:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 text-center sm:text-left">
+                    <div class="w-full sm:w-auto">
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">Dashboard
+                            Pelaporan</h1>
+                        <p class="text-slate-500 mt-1 text-sm sm:text-base">Monitoring & Ekspor Data E-Kinerja</p>
+                    </div>
+                </div>
+
+                <div
+                    class="glass-panel p-4 sm:p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/95 lg:bg-white/90">
+                    <!-- Filters -->
+                    <div
+                        class="flex flex-col md:flex-row gap-3 md:gap-4 items-end mb-6 pb-6 border-b border-slate-200/80">
+                        <div class="w-full md:w-1/4">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5 ml-1">Bulan</label>
+                            <select id="filterBulan"
+                                class="input-field w-full p-2.5 sm:p-3 bg-slate-50 lg:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 text-sm cursor-pointer"
+                                onchange="loadData()">
+                                <option value="Semua">Semua</option>
+                                <option value="01">Januari</option>
+                                <option value="02">Februari</option>
+                                <option value="03">Maret</option>
+                                <option value="04">April</option>
+                                <option value="05">Mei</option>
+                                <option value="06">Juni</option>
+                                <option value="07">Juli</option>
+                                <option value="08">Agustus</option>
+                                <option value="09">September</option>
+                                <option value="10">Oktober</option>
+                                <option value="11">November</option>
+                                <option value="12">Desember</option>
+                            </select>
+                        </div>
+
+                        <div class="w-full md:w-1/2">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5 ml-1">SKP</label>
+                            <select id="filterSkpDashboard"
+                                class="input-field w-full p-2.5 sm:p-3 bg-slate-50 lg:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 text-sm cursor-pointer"
+                                onchange="loadData()">
+                                <option value="Semua">Semua SKP</option>
+                                <!-- Akan dimuat via JS -->
+                            </select>
+                        </div>
+
+                        <div class="w-full md:w-auto ml-auto mt-2 md:mt-0">
+                            <button onclick="downloadReport()" id="btnDownload"
+                                class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-md flex justify-center items-center gap-2 text-sm sm:text-base">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20"
+                                    fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                <span>Unduh PDF</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm bg-white">
+                        <table class="w-full text-sm text-left text-slate-600">
+                            <thead class="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 font-bold whitespace-nowrap">Tanggal</th>
+                                    <th scope="col" class="px-4 py-3 font-bold min-w-[200px]">Butir SKP</th>
+                                    <th scope="col" class="px-4 py-3 font-bold min-w-[250px]">Deskripsi</th>
+                                    <th scope="col" class="px-4 py-3 font-bold text-center">Output</th>
+                                    <th scope="col" class="px-4 py-3 font-bold text-center">Evidence</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <tr>
+                                    <td colspan="5" class="px-6 py-8 text-center text-slate-500">Memuat...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: DASHBOARD WFA -->
+            <div id="section-dashboard-wfa" class="hidden fade-in max-w-6xl mx-auto">
+                <div
+                    class="mb-6 lg:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 text-center sm:text-left">
+                    <div class="w-full sm:w-auto">
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">Dashboard WFA/WFH
+                        </h1>
+                        <p class="text-slate-500 mt-1 text-sm sm:text-base">Monitoring Data Work From Anywhere</p>
+                    </div>
+                </div>
+
+                <div
+                    class="glass-panel p-4 sm:p-6 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/95 lg:bg-white/90">
+                    <div
+                        class="flex flex-col md:flex-row gap-3 md:gap-4 items-end mb-6 pb-6 border-b border-slate-200/80">
+                        <div class="w-full md:w-1/4">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1.5 ml-1">Bulan</label>
+                            <select id="filterBulanWfa"
+                                class="input-field w-full p-2.5 sm:p-3 bg-slate-50 lg:bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-700 text-sm cursor-pointer"
+                                onchange="loadData()">
+                                <option value="Semua">Semua</option>
+                                <option value="01">Januari</option>
+                                <option value="02">Februari</option>
+                                <option value="03">Maret</option>
+                                <option value="04">April</option>
+                                <option value="05">Mei</option>
+                                <option value="06">Juni</option>
+                                <option value="07">Juli</option>
+                                <option value="08">Agustus</option>
+                                <option value="09">September</option>
+                                <option value="10">Oktober</option>
+                                <option value="11">November</option>
+                                <option value="12">Desember</option>
+                            </select>
+                        </div>
+                        <div class="w-full md:w-auto ml-auto mt-2 md:mt-0">
+                            <button onclick="downloadReportWFA()" id="btnDownloadWfa"
+                                class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-md flex justify-center items-center gap-2 text-sm sm:text-base">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20"
+                                    fill="currentColor">
+                                    <path fill-rule="evenodd"
+                                        d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                <span>Unduh PDF WFA</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-slate-200/80 shadow-sm bg-white">
+                        <table class="w-full text-sm text-left text-slate-600">
+                            <thead class="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 font-bold whitespace-nowrap text-center">No</th>
+                                    <th scope="col" class="px-4 py-3 font-bold whitespace-nowrap">Tanggal</th>
+                                    <th scope="col" class="px-4 py-3 font-bold whitespace-nowrap text-center">Jam Masuk
+                                    </th>
+                                    <th scope="col" class="px-4 py-3 font-bold whitespace-nowrap text-center">Jam Pulang
+                                    </th>
+                                    <th scope="col" class="px-4 py-3 font-bold min-w-[200px]">Rencana Hasil Kerja</th>
+                                    <th scope="col" class="px-4 py-3 font-bold min-w-[250px]">Realisasi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBodyWfa">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-8 text-center text-slate-500">Memuat...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- SECTION 3: DASHBOARD WFA (Ditempatkan di luar main untuk overlay atau disesuaikan dengan struktur SPA, tapi karena struktur SPA kita hidden/show class, taruh di dalam scrollable content area) -->
+
+
+    <!-- Mobile Bottom Navigation (Visible only on mobile) -->
+    <nav
+        class="lg:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around items-center pb-safe z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button onclick="switchTab('input')" id="bottom-nav-input"
+            class="flex-1 py-3 px-2 flex flex-col items-center gap-1 text-indigo-600 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" id="bottom-icon-input" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            <span class="text-[11px] font-bold" id="bottom-text-input">Input</span>
+        </button>
+        <button onclick="switchTab('dashboard')" id="bottom-nav-dashboard"
+            class="flex-1 py-3 px-2 flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" id="bottom-icon-dashboard" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span class="text-[11px] font-medium" id="bottom-text-dashboard">Semua</span>
+        </button>
+        <button onclick="switchTab('dashboard-wfa')" id="bottom-nav-dashboard-wfa"
+            class="flex-1 py-3 px-2 flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" id="bottom-icon-dashboard-wfa" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span class="text-[11px] font-medium" id="bottom-text-dashboard-wfa">WFA</span>
+        </button>
+    </nav>
+
+    <!-- Global Toast Notification Container -->
+    <div id="toast-container"
+        class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[60] flex flex-col gap-2 w-[90%] max-w-sm pointer-events-none">
+        <!-- Toasts will be injected here -->
+    </div>
+
+    <script>
+        // URL Web App Google Apps Script Anda (WAJIB DIISI)
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycby7yHjymd10hFa4HQddlVMOXU_-7u4OeW6P1ISLsOlx8QYMhJMVVxXwZx0TTu9hiRU/exec";
+
+        const dummySKP = [
+            "Analisis data informasi media & masyarakat",
+            "Rancangan konferensi pers/seminar/rapat humas",
+            "Pengumpulan isu publik",
+            "Pengolahan konten media",
+            "Penyusunan berita media daring",
+            "Penyusunan naskah pidato",
+            "Penulisan latar fakta (Factsheet)",
+            "Pelaksanaan peliputan lembaga",
+            "Siaran melalui media internal",
+            "Peningkatan Kapasitas Kehumasan"
+        ];
+
+        // Custom Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            // Base styles
+            toast.className = "toast-enter p-4 rounded-xl shadow-lg flex items-center gap-3 pointer-events-auto transition-opacity duration-300";
+
+            // Type styles
+            if (type === 'success') {
+                toast.classList.add('bg-white', 'border-l-4', 'border-emerald-500', 'text-slate-700');
+                toast.innerHTML = `<div class="bg-emerald-100 p-1.5 rounded-full"><svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><p class="text-sm font-semibold">${message}</p>`;
+            } else if (type === 'error') {
+                toast.classList.add('bg-white', 'border-l-4', 'border-red-500', 'text-slate-700');
+                toast.innerHTML = `<div class="bg-red-100 p-1.5 rounded-full"><svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></div><p class="text-sm font-semibold">${message}</p>`;
+            } else {
+                toast.classList.add('bg-slate-800', 'text-white');
+                toast.innerHTML = `<p class="text-sm font-medium">${message}</p>`;
+            }
+
+            container.appendChild(toast);
+
+            // Remove after 3.5 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // SPA Navigation Logic
+        function switchTab(tab) {
+            const inputSec = document.getElementById('section-input');
+            const dashSec = document.getElementById('section-dashboard');
+            const dashWfaSec = document.getElementById('section-dashboard-wfa');
+
+            // Desktop Nav elements
+            const navInput = document.getElementById('nav-input');
+            const navDash = document.getElementById('nav-dashboard');
+            const navDashWfa = document.getElementById('nav-dashboard-wfa');
+
+            // Bottom Nav elements
+            const bNavInput = document.getElementById('bottom-nav-input');
+            const bNavDash = document.getElementById('bottom-nav-dashboard');
+            const bNavDashWfa = document.getElementById('bottom-nav-dashboard-wfa');
+            const bTextInput = document.getElementById('bottom-text-input');
+            const bTextDash = document.getElementById('bottom-text-dashboard');
+            const bTextDashWfa = document.getElementById('bottom-text-dashboard-wfa');
+
+            // Reset Desktop Styles
+            navInput.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors";
+            navDash.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors";
+            navDashWfa.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors";
+
+            // Reset Bottom Nav Styles
+            bNavInput.className = "flex-1 py-3 px-2 flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors";
+            bNavDash.className = "flex-1 py-3 px-2 flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors";
+            bNavDashWfa.className = "flex-1 py-3 px-2 flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors";
+            bTextInput.className = "text-[11px] font-medium";
+            bTextDash.className = "text-[11px] font-medium";
+            bTextDashWfa.className = "text-[11px] font-medium";
+
+            // Hide all sections first
+            inputSec.classList.add('hidden');
+            dashSec.classList.add('hidden');
+            if (dashWfaSec) dashWfaSec.classList.add('hidden');
+
+            if (tab === 'input') {
+                inputSec.classList.remove('hidden');
+
+                navInput.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl bg-indigo-50 text-indigo-700 transition-colors";
+
+                bNavInput.className = "flex-1 py-3 px-2 flex flex-col items-center gap-1 text-indigo-600 transition-colors";
+                bTextInput.className = "text-[11px] font-bold";
+                if (document.getElementById('mobileTitle')) document.getElementById('mobileTitle').innerText = "Jurnal Yuyun";
+            } else if (tab === 'dashboard') {
+                dashSec.classList.remove('hidden');
+
+                navDash.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl bg-indigo-50 text-indigo-700 transition-colors";
+
+                bNavDash.className = "flex-1 py-3 px-2 flex flex-col items-center gap-1 text-indigo-600 transition-colors";
+                bTextDash.className = "text-[11px] font-bold";
+                if (document.getElementById('mobileTitle')) document.getElementById('mobileTitle').innerText = "Dashboard Laporan";
+                loadData();
+            } else if (tab === 'dashboard-wfa') {
+                if (dashWfaSec) dashWfaSec.classList.remove('hidden');
+
+                navDashWfa.className = "w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold rounded-xl bg-indigo-50 text-indigo-700 transition-colors";
+
+                bNavDashWfa.className = "flex-1 py-3 px-2 flex flex-col items-center gap-1 text-indigo-600 transition-colors";
+                bTextDashWfa.className = "text-[11px] font-bold";
+                if (document.getElementById('mobileTitle')) document.getElementById('mobileTitle').innerText = "Dashboard WFA";
+                loadData();
+            }
+        }
+
+        // --- FORM LOGIC ---
+        document.getElementById('tanggal').valueAsDate = new Date();
+
+        let taskCounter = 1;
+
+        function addTaskRow() {
+            taskCounter++;
+            const container = document.getElementById('tasksContainer');
+            const newId = taskCounter;
+
+            const html = `
+                <div class="task-block relative bg-white/70 backdrop-blur-md p-5 rounded-2xl border border-indigo-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(79,70,229,0.08)] hover:border-indigo-300 transition-all duration-300 mt-4 fade-in" id="task_${newId}">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-sm font-bold text-indigo-600">Pekerjaan #${newId}</h3>
+                        <button type="button" onclick="removeTaskRow(${newId})" class="text-red-500 hover:text-red-700 p-1 bg-red-50 hover:bg-red-100 rounded-lg transition-colors text-xs font-semibold flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                            Hapus
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2 ml-1">Deskripsi Pekerjaan / Output Spesifik</label>
+                            <textarea name="deskripsi_${newId}" required rows="2" placeholder="Contoh: Menyusun naskah pidato..." class="input-field w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 text-sm shadow-sm resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2 ml-1">Kuantitas / Volume Output</label>
+                            <div class="flex items-center space-x-3">
+                                <input type="number" name="kuantitas_${newId}" required min="1" value="1" class="input-field w-20 sm:w-24 p-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-center text-slate-700 shadow-sm font-semibold">
+                                <span class="text-slate-500 text-xs sm:text-sm font-medium bg-white px-3 py-3 rounded-xl border border-slate-200/60 shadow-sm">Dokumen / Kegiatan</span>
+                            </div>
+                        </div>
+                        <div class="space-y-3 bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                            <label class="block text-sm font-semibold text-slate-700 ml-1">Jenis Bukti / Evidence</label>
+                            <div class="flex flex-wrap gap-2 sm:gap-4 bg-slate-50 p-2 rounded-xl border border-slate-200 inline-flex w-full sm:w-auto">
+                                <label class="flex-1 sm:flex-none flex items-center justify-center space-x-2 cursor-pointer py-1 px-2">
+                                    <input type="radio" name="evidenceType_${newId}" value="file" checked class="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300" onchange="toggleEvidenceType(${newId})">
+                                    <span class="text-xs sm:text-sm text-slate-700 font-medium">Dokumen</span>
+                                </label>
+                                <label class="flex-1 sm:flex-none flex items-center justify-center space-x-2 cursor-pointer py-1 px-2 border-l border-slate-200 sm:border-none">
+                                    <input type="radio" name="evidenceType_${newId}" value="link" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-slate-300" onchange="toggleEvidenceType(${newId})">
+                                    <span class="text-xs sm:text-sm text-slate-700 font-medium">Tautan (URL)</span>
+                                </label>
+                            </div>
+                            <div id="fileArea_${newId}" class="relative group mt-2 block transition-all duration-300">
+                                <div class="relative bg-slate-50 p-4 rounded-xl flex flex-col items-center justify-center border-dashed border-2 border-indigo-200 hover:border-indigo-400 hover:bg-white transition-all cursor-pointer" onclick="document.getElementById('fileEvidence_${newId}').click()">
+                                    <div class="bg-indigo-100 p-2 rounded-full mb-2 group-hover:bg-indigo-200 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                    </div>
+                                    <span class="text-xs font-semibold text-slate-700" id="fileNameDisplay_${newId}">Pilih File Bukti</span>
+                                    <input type="file" id="fileEvidence_${newId}" name="fileEvidence_${newId}" class="hidden" onchange="updateFileName(this, ${newId})">
+                                </div>
+                            </div>
+                            <div id="linkArea_${newId}" class="hidden mt-2 transition-all duration-300">
+                                <input type="url" name="tautan_${newId}" id="linkEvidence_${newId}" placeholder="https://drive.google.com/..." class="input-field w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-slate-700 shadow-sm text-sm">
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        function removeTaskRow(id) {
+            const taskBlock = document.getElementById('task_' + id);
+            if (taskBlock) taskBlock.remove();
+        }
+
+        function updateFileName(input, id) {
+            const display = document.getElementById('fileNameDisplay_' + id);
+            if (input.files && input.files.length > 0) {
+                display.textContent = input.files[0].name;
+                display.classList.add('text-indigo-600');
+            } else {
+                display.textContent = 'Pilih File Bukti';
+                display.classList.remove('text-indigo-600');
+            }
+        }
+
+        function toggleEvidenceType(id) {
+            var isFile = document.querySelector(`input[name="evidenceType_${id}"]:checked`).value === 'file';
+            var fileArea = document.getElementById('fileArea_' + id);
+            var linkArea = document.getElementById('linkArea_' + id);
+            var linkInput = document.getElementById('linkEvidence_' + id);
+
+            if (isFile) {
+                fileArea.classList.remove('hidden');
+                fileArea.classList.add('block');
+                linkArea.classList.add('hidden');
+                linkArea.classList.remove('block');
+                if (linkInput) linkInput.removeAttribute('required');
+            } else {
+                fileArea.classList.add('hidden');
+                fileArea.classList.remove('block');
+                linkArea.classList.remove('hidden');
+                linkArea.classList.add('block');
+                if (linkInput) linkInput.setAttribute('required', 'required');
+            }
+        }
+
+        function toggleWFAFields() {
+            const isChecked = document.getElementById('isWFA').checked;
+            const wfaFields = document.getElementById('wfaFields');
+            const jamMasuk = document.getElementById('jamMasuk');
+            const jamPulang = document.getElementById('jamPulang');
+            if (isChecked) {
+                wfaFields.classList.remove('hidden');
+                jamMasuk.setAttribute('required', 'required');
+                jamPulang.setAttribute('required', 'required');
+            } else {
+                wfaFields.classList.add('hidden');
+                jamMasuk.removeAttribute('required');
+                jamPulang.removeAttribute('required');
+                jamMasuk.value = '';
+                jamPulang.value = '';
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const selectForm = document.getElementById("butirSkp");
+            const selectDash = document.getElementById("filterSkpDashboard");
+
+            function populateSKP(data) {
+                // Bersihkan opsi loading
+                selectForm.innerHTML = '<option value="">-- Pilih Butir SKP --</option>';
+                selectDash.innerHTML = '<option value="Semua">Semua SKP</option>';
+
+                // Cek apakah data dari server berupa error atau tidak valid
+                if (!Array.isArray(data) || (data.length > 0 && data[0].toString().startsWith("Error"))) {
+                    console.warn("Menggunakan data dummy karena server mengembalikan error:", data);
+                    data = dummySKP;
+                }
+
+                data.forEach(function (item) {
+                    let opt1 = document.createElement("option"); opt1.value = item; opt1.text = item;
+                    let opt2 = document.createElement("option"); opt2.value = item; opt2.text = item;
+                    selectForm.appendChild(opt1);
+                    selectDash.appendChild(opt2);
+                });
+            }
+
+            if (GAS_API_URL && GAS_API_URL !== "ISI_DENGAN_URL_WEB_APP_ANDA_DISINI") {
+                fetch(GAS_API_URL + "?action=getSKP")
+                    .then(response => {
+                        if (!response.ok) throw new Error("Network response was not ok");
+                        return response.json();
+                    })
+                    .then(data => populateSKP(data.error ? dummySKP : data))
+                    .catch(error => {
+                        console.error("Gagal memuat SKP, menggunakan dummy data:", error);
+                        populateSKP(dummySKP); // fallback to dummy
+                    });
+            } else {
+                populateSKP(dummySKP);
+            }
+        });
+
+        async function submitForm(event) {
+            event.preventDefault();
+            var btn = document.getElementById("btnSubmit");
+            var originalBtnContent = btn.innerHTML;
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Menyimpan...</span>`;
+            btn.disabled = true;
+
+            var form = document.getElementById("ekinerjaForm");
+            var tanggal = form.tanggal.value;
+            var butirSkp = form.butirSkp.value;
+            var isWFA = document.getElementById("isWFA") ? document.getElementById("isWFA").checked : false;
+            var jamMasuk = document.getElementById("jamMasuk") ? document.getElementById("jamMasuk").value : "";
+            var jamPulang = document.getElementById("jamPulang") ? document.getElementById("jamPulang").value : "";
+
+            let blocks = document.querySelectorAll('.task-block');
+
+            // Helper function to read file as Base64
+            const readFileAsBase64 = (file) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            let tasks = [];
+
+            try {
+                for (let block of blocks) {
+                    let id = block.id.split('_')[1];
+                    let evidenceType = form.querySelector(`input[name="evidenceType_${id}"]:checked`).value;
+                    let tautanVal = document.getElementById(`linkEvidence_${id}`) ? document.getElementById(`linkEvidence_${id}`).value : "";
+
+                    let taskData = {
+                        tanggal: tanggal,
+                        skp: butirSkp,
+                        deskripsi: form[`deskripsi_${id}`].value,
+                        kuantitas: form[`kuantitas_${id}`].value,
+                        type: evidenceType,
+                        evidence: evidenceType === 'link' ? tautanVal : 'Tersimpan di Drive',
+                        tipeKerja: isWFA ? 'WFA' : 'WFO',
+                        jamMasuk: isWFA ? jamMasuk : '',
+                        jamPulang: isWFA ? jamPulang : ''
+                    };
+
+                    if (evidenceType === 'file') {
+                        const fileInput = document.getElementById(`fileEvidence_${id}`);
+                        if (fileInput.files.length > 0) {
+                            const file = fileInput.files[0];
+                            taskData.fileData = await readFileAsBase64(file);
+                            taskData.fileName = file.name;
+                            taskData.fileMimeType = file.type;
+                        } else {
+                            throw new Error(`File bukti untuk Pekerjaan #${id} belum dipilih!`);
+                        }
+                    }
+
+                    tasks.push(taskData);
+                }
+
+                if (GAS_API_URL && GAS_API_URL !== "ISI_DENGAN_URL_WEB_APP_ANDA_DISINI") {
+                    const response = await fetch(GAS_API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8',
+                        },
+                        body: JSON.stringify({ action: 'save', tasks: tasks })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.status === 'success') {
+                        showResult(result.message, originalBtnContent);
+                    } else {
+                        throw new Error(result.message || "Gagal menyimpan data ke server");
+                    }
+                } else {
+                    setTimeout(() => {
+                        // Simulate save to local storage
+                        tasks.reverse().forEach(task => {
+                            // Hapus fileData besar dari dummy save
+                            let dummyTask = { ...task };
+                            delete dummyTask.fileData;
+                            dummyDataEkinerja.unshift(dummyTask);
+                        });
+                        localStorage.setItem('ekinerja_data', JSON.stringify(dummyDataEkinerja));
+
+                        showResult("Data berhasil disimpan secara lokal (Dummy mode)!", originalBtnContent);
+                    }, 1000);
+                }
+            } catch (error) {
+                showToast(error.message, 'error');
+                btn.innerHTML = originalBtnContent;
+                btn.disabled = false;
+            }
+        }
+
+        function showResult(response, originalBtnContent) {
+            showToast(response, 'success');
+
+            // Reset to 1 default task
+            const container = document.getElementById('tasksContainer');
+            let firstTaskHtml = container.firstElementChild.outerHTML;
+            container.innerHTML = firstTaskHtml;
+            taskCounter = 1; // reset id
+            document.getElementById('tasksContainer').firstElementChild.id = 'task_1';
+
+            document.getElementById("ekinerjaForm").reset();
+            document.getElementById('tanggal').valueAsDate = new Date();
+            updateFileName(document.getElementById('fileEvidence_1'), 1);
+
+            var btn = document.getElementById("btnSubmit");
+            btn.innerHTML = originalBtnContent;
+            btn.disabled = false;
+        }
+
+        // --- DASHBOARD LOGIC ---
+        let dummyDataEkinerja = JSON.parse(localStorage.getItem('ekinerja_data')) || [
+            { tanggal: '2026-07-01', skp: 'Penyusunan berita media daring', deskripsi: 'Menulis rilis berita kunjungan kerja', kuantitas: 1, evidence: '#', type: 'link' },
+            { tanggal: '2026-07-05', skp: 'Pengolahan konten media', deskripsi: 'Membuat desain infografis', kuantitas: 2, evidence: '#', type: 'file' },
+            { tanggal: '2026-06-15', skp: 'Penyusunan naskah pidato', deskripsi: 'Pidato pimpinan untuk acara', kuantitas: 1, evidence: '#', type: 'file' },
+        ];
+
+        let currentData = [];
+
+        function loadData() {
+            var tbody = document.getElementById("tableBody");
+            var filterBulan = document.getElementById("filterBulan").value;
+            var filterSkp = document.getElementById("filterSkpDashboard").value;
+
+            tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500"><svg class="animate-spin h-6 w-6 text-indigo-500 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Memuat...</td></tr>`;
+
+            if (GAS_API_URL && GAS_API_URL !== "ISI_DENGAN_URL_WEB_APP_ANDA_DISINI") {
+                const url = new URL(GAS_API_URL);
+                url.searchParams.append('action', 'getHistory');
+                url.searchParams.append('bulan', filterBulan);
+                url.searchParams.append('skp', filterSkp);
+
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) throw new Error("Network response was not ok");
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!Array.isArray(data) || (data.length > 0 && data[0].error)) {
+                            throw new Error(data.error || "Data dari server tidak valid");
+                        }
+                        currentData = data;
+                        renderTable(data);
+                        renderTableWfa(data);
+                    })
+                    .catch(error => {
+                        console.warn("Gagal memuat data dari server, menggunakan dummy:", error);
+                        let filtered = dummyDataEkinerja.filter(item => {
+                            let matchBulan = filterBulan === 'Semua' || item.tanggal.split('-')[1] === filterBulan;
+                            let matchSkp = filterSkp === 'Semua' || item.skp === filterSkp;
+                            return matchBulan && matchSkp;
+                        });
+                        currentData = filtered;
+                        renderTable(filtered);
+                    });
+            } else {
+                setTimeout(() => {
+                    let filtered = dummyDataEkinerja.filter(item => {
+                        let matchBulan = filterBulan === 'Semua' || item.tanggal.split('-')[1] === filterBulan;
+                        let matchSkp = filterSkp === 'Semua' || item.skp === filterSkp;
+                        return matchBulan && matchSkp;
+                    });
+                    currentData = filtered;
+                    renderTable(filtered);
+                    renderTableWfa(filtered);
+                }, 400);
+            }
+        }
+
+        function renderTable(data) {
+            var tbody = document.getElementById("tableBody");
+            tbody.innerHTML = "";
+            if (!data || data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500 font-medium">Tidak ada data.</td></tr>`;
+                return;
+            }
+
+            // Group data by Tanggal + SKP
+            let grouped = [];
+            data.forEach(item => {
+                let key = item.tanggal + '|' + item.skp;
+                let group = grouped.find(g => g.key === key);
+                if (!group) {
+                    group = { key: key, tanggal: item.tanggal, skp: item.skp, items: [] };
+                    grouped.push(group);
+                }
+                group.items.push(item);
+            });
+
+            grouped.forEach(group => {
+                let rowSpan = group.items.length;
+                group.items.forEach((item, index) => {
+                    let evidenceHtml = item.type === 'link'
+                        ? `<a href="${item.evidence}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-indigo-100 transition-colors">Tautan</a>`
+                        : `<a href="${item.evidence}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">File</a>`;
+
+                    let tr = document.createElement("tr");
+                    tr.className = "border-b border-slate-100 hover:bg-slate-50/50 transition-colors";
+
+                    let html = "";
+                    if (index === 0) {
+                        html += `<td rowspan="${rowSpan}" class="px-3 sm:px-4 py-3 font-medium text-slate-800 align-top border-r border-slate-100 bg-slate-50/30">${item.tanggal}</td>`;
+                        html += `<td rowspan="${rowSpan}" class="px-3 sm:px-4 py-3 align-top border-r border-slate-100 bg-slate-50/30" title="${item.skp}"><div class="line-clamp-2 sm:line-clamp-none">${item.skp}</div></td>`;
+                    }
+                    html += `
+                        <td class="px-3 sm:px-4 py-3 text-xs" title="${item.deskripsi}"><div class="line-clamp-2 sm:line-clamp-none">${item.deskripsi}</div></td>
+                        <td class="px-3 sm:px-4 py-3 text-center font-semibold text-slate-700">${item.kuantitas}</td>
+                        <td class="px-3 sm:px-4 py-3 text-center">${evidenceHtml}</td>`;
+
+                    tr.innerHTML = html;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        function renderTableWfa(data) {
+            var tbody = document.getElementById("tableBodyWfa");
+            if (!tbody) return;
+            tbody.innerHTML = "";
+
+            var filterBulan = document.getElementById("filterBulanWfa") ? document.getElementById("filterBulanWfa").value : 'Semua';
+            let wfaData = data.filter(item => item.tipe_kerja === 'WFA');
+
+            if (filterBulan !== 'Semua') {
+                wfaData = wfaData.filter(item => item.tanggal.split('-')[1] === filterBulan);
+            }
+
+            if (!wfaData || wfaData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 font-medium">Tidak ada data WFA.</td></tr>`;
+                return;
+            }
+
+            wfaData.forEach((item, index) => {
+                let tr = document.createElement("tr");
+                tr.className = "border-b border-slate-100 hover:bg-slate-50/50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-4 py-3 align-top text-center font-medium">${index + 1}</td>
+                    <td class="px-4 py-3 align-top font-medium">${item.tanggal}</td>
+                    <td class="px-4 py-3 align-top text-center">${item.jam_masuk}</td>
+                    <td class="px-4 py-3 align-top text-center">${item.jam_pulang}</td>
+                    <td class="px-4 py-3 align-top font-medium text-slate-800">${item.skp}</td>
+                    <td class="px-4 py-3 align-top text-slate-500">${item.deskripsi}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function downloadReport() {
+            var btn = document.getElementById("btnDownload");
+            var originalContent = btn.innerHTML;
+            btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Memproses...</span>`;
+            btn.disabled = true;
+
+            var filterBulan = document.getElementById("filterBulan").value;
+            var filterSkp = document.getElementById("filterSkpDashboard").value;
+
+            if (typeof google !== 'undefined' && google.script) {
+                google.script.run.withSuccessHandler(function (url) {
+                    btn.innerHTML = originalContent; btn.disabled = false;
+                    if (url) window.open(url, '_blank'); else showToast("Gagal menghasilkan PDF.", "error");
+                }).generateLaporanPDF(filterBulan, filterSkp);
+            } else {
+                setTimeout(() => {
+                    showToast("Menghasilkan dokumen PDF...", "success");
+
+                    // Initialize jsPDF
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+
+                    // Header Text
+                    doc.setFontSize(14);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("LAPORAN PELAKSANAAN KEGIATAN KEHUMASAN", 105, 20, { align: "center" });
+
+                    doc.setFontSize(11);
+                    doc.setFont("helvetica", "normal");
+                    let labelX = 14, colonX = 42, valueX = 45;
+
+                    doc.text("Nama Lengkap", labelX, 35); doc.text(":", colonX, 35); doc.text("Yuyun Wulandari", valueX, 35);
+                    doc.text("NIP", labelX, 41); doc.text(":", colonX, 41); doc.text("199207012020122008", valueX, 41);
+                    doc.text("Jabatan", labelX, 47); doc.text(":", colonX, 47); doc.text("Pranata Humas Ahli Pertama", valueX, 47);
+                    doc.text("Pangkat/Gol", labelX, 53); doc.text(":", colonX, 53); doc.text("Penata Muda Tk. I/IIIb", valueX, 53);
+                    doc.text("Unit Kerja", labelX, 59); doc.text(":", colonX, 59); doc.text("Sekretariat Direktorat Jenderal Pendidikan Islam", valueX, 59);
+
+                    // Format Bulan (Bisa disesuaikan lebih jauh)
+                    let namaBulan = filterBulan !== "Semua" ? document.getElementById("filterBulan").options[document.getElementById("filterBulan").selectedIndex].text : "Semua Bulan";
+                    doc.text("Bulan", labelX, 65); doc.text(":", colonX, 65); doc.text(namaBulan + " 2026", valueX, 65);
+
+                    // Gunakan data yang sedang ditampilkan (sudah difilter)
+                    let filtered = currentData;
+
+                    // Prepare Table Data (Merged Rowspan)
+                    let tableBody = [];
+                    if (filtered.length === 0) {
+                        tableBody.push(["-", "-", "Tidak ada data", "-", "-"]);
+                    } else {
+                        // Group data by Tanggal + SKP
+                        let pdfGrouped = [];
+                        filtered.forEach(item => {
+                            let key = item.tanggal + '|' + item.skp;
+                            let group = pdfGrouped.find(g => g.key === key);
+                            if (!group) {
+                                group = { key: key, tanggal: item.tanggal, skp: item.skp, items: [] };
+                                pdfGrouped.push(group);
+                            }
+                            group.items.push(item);
+                        });
+
+                        let no = 1;
+                        pdfGrouped.forEach(group => {
+                            let rowSpan = group.items.length;
+                            group.items.forEach((item, index) => {
+                                let evUrl = item.evidence_url || item.evidence;
+                                let volumeText = item.kuantitas + (evUrl && evUrl !== '#' ? ' (Lihat Bukti)' : '');
+                                let evidenceObj = { content: volumeText, linkURL: evUrl !== '#' ? evUrl : null };
+
+                                if (index === 0) {
+                                    tableBody.push([
+                                        { rowSpan: rowSpan, content: no++, styles: { valign: 'middle', halign: 'center' } },
+                                        { rowSpan: rowSpan, content: group.tanggal, styles: { valign: 'middle', halign: 'center' } },
+                                        { rowSpan: rowSpan, content: group.skp, styles: { valign: 'middle' } },
+                                        item.deskripsi,
+                                        evidenceObj
+                                    ]);
+                                } else {
+                                    tableBody.push([
+                                        item.deskripsi,
+                                        evidenceObj
+                                    ]);
+                                }
+                            });
+                        });
+                    }
+
+                    // Draw Table
+                    doc.autoTable({
+                        startY: 75,
+                        head: [['No', 'Tanggal', 'Butir Kegiatan SKP', 'Deskripsi / Output', 'Volume & Bukti']],
+                        body: tableBody,
+                        theme: 'grid',
+                        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' }, // Slate-800 for premium modern look
+                        alternateRowStyles: { fillColor: [248, 250, 252] }, // Slate-50 for subtle alternating rows
+                        styles: { fontSize: 9, cellPadding: 4, lineColor: [226, 232, 240], lineWidth: 0.1 },
+                        columnStyles: {
+                            0: { cellWidth: 10, halign: 'center' },
+                            1: { cellWidth: 25, halign: 'center' },
+                            4: { cellWidth: 30, halign: 'center' }
+                        },
+                        didParseCell: function (data) {
+                            if (data.section === 'body' && data.column.index === 4) {
+                                if (data.cell.raw && data.cell.raw.linkURL) {
+                                    data.cell.styles.textColor = [0, 0, 255]; // Make text blue to indicate link
+                                    data.cell.styles.fontStyle = 'underline';
+                                }
+                            }
+                        },
+                        didDrawCell: function (data) {
+                            if (data.section === 'body' && data.column.index === 4) {
+                                if (data.cell.raw && data.cell.raw.linkURL) {
+                                    doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: data.cell.raw.linkURL });
+                                }
+                            }
+                        }
+                    });
+
+                    // Trigger Download
+                    doc.save(`Laporan_Ekinerja_${namaBulan}.pdf`);
+
+                    btn.innerHTML = originalContent; btn.disabled = false;
+                }, 1000);
+            }
+        }
+
+        function downloadReportWFA() {
+            var btn = document.getElementById("btnDownloadWfa");
+            var originalContent = btn.innerHTML;
+            btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Menyiapkan...</span>`;
+            btn.disabled = true;
+
+            if (typeof window.jspdf === 'undefined') {
+                showToast("Library PDF masih dimuat, coba lagi sebentar.", 'error');
+                btn.innerHTML = originalContent; btn.disabled = false;
+                return;
+            }
+
+            var filterBulan = document.getElementById("filterBulanWfa").value;
+            let wfaData = currentData.filter(item => item.tipe_kerja === 'WFA');
+            if (filterBulan !== 'Semua') {
+                wfaData = wfaData.filter(item => item.tanggal.split('-')[1] === filterBulan);
+            }
+
+            if (!wfaData || wfaData.length === 0) {
+                showToast("Tidak ada data WFA untuk dicetak", 'error');
+                btn.innerHTML = originalContent; btn.disabled = false;
+                return;
+            }
+
+            setTimeout(() => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('l', 'pt', 'a4'); // landscape
+
+                doc.setFontSize(14);
+                doc.setFont("helvetica", "bold");
+                doc.text("LAPORAN PELAKSANAAN TUGAS WORK FROM ANYWHERE (WFA)", 420, 30, { align: 'center' });
+
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "normal");
+
+                let labelX = 14, colonX = 42, valueX = 45;
+                doc.text("Nama Lengkap", labelX, 50); doc.text(":", colonX, 50); doc.text("Yuyun Wulandari", valueX, 50);
+                doc.text("NIP", labelX, 65); doc.text(":", colonX, 65); doc.text("199207012020122008", valueX, 65);
+                doc.text("Jabatan", labelX, 80); doc.text(":", colonX, 80); doc.text("Pranata Humas Ahli Pertama", valueX, 80);
+                doc.text("Pangkat/Gol", labelX, 95); doc.text(":", colonX, 95); doc.text("Penata Muda Tk. I/IIIb", valueX, 95);
+                doc.text("Unit Kerja", labelX, 110); doc.text(":", colonX, 110); doc.text("Sekretariat Direktorat Jenderal Pendidikan Islam", valueX, 110);
+
+                let namaBulan = filterBulan !== "Semua" ? document.getElementById("filterBulanWfa").options[document.getElementById("filterBulanWfa").selectedIndex].text : "Semua Bulan";
+                doc.text("Bulan", labelX, 125); doc.text(":", colonX, 125); doc.text(namaBulan + " 2026", valueX, 125);
+
+                let tableBody = [];
+                let no = 1;
+
+                wfaData.forEach(item => {
+                    tableBody.push([
+                        { content: no++, styles: { halign: 'center', valign: 'middle' } },
+                        { content: item.tanggal, styles: { halign: 'center', valign: 'middle' } },
+                        { content: item.jam_masuk, styles: { halign: 'center', valign: 'middle' } },
+                        { content: item.jam_pulang, styles: { halign: 'center', valign: 'middle' } },
+                        item.skp,
+                        item.deskripsi
+                    ]);
+                });
+
+                doc.autoTable({
+                    startY: 140,
+                    head: [['No', 'Tanggal', 'Jam Masuk', 'Jam Pulang', 'Rencana Hasil Kerja', 'Realisasi']],
+                    body: tableBody,
+                    theme: 'grid',
+                    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
+                    styles: { fontSize: 9, cellPadding: 4, lineColor: [226, 232, 240], lineWidth: 0.1 },
+                    columnStyles: {
+                        0: { cellWidth: 25, halign: 'center' },
+                        1: { cellWidth: 70, halign: 'center' },
+                        2: { cellWidth: 70, halign: 'center' },
+                        3: { cellWidth: 70, halign: 'center' }
+                    }
+                });
+
+                doc.save(`Laporan_WFA_${namaBulan}.pdf`);
+                btn.innerHTML = originalContent; btn.disabled = false;
+            }, 1000);
+        }
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful');
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+
+</html>
