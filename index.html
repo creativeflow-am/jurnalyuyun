@@ -233,8 +233,8 @@
                         YW
                     </div>
                     <div>
-                        <p class="text-sm font-bold text-slate-700">Developed by @agung_sde</p>
-                        <p class="text-xs text-slate-500">for Wulandari Ahdiansyah</p>
+                        <p class="text-sm font-bold text-slate-700">Yuyun Wulandari</p>
+                        <p class="text-xs text-slate-500">Pranata Humas</p>
                     </div>
                 </div>
             </div>
@@ -251,9 +251,9 @@
             <!-- SECTION 1: INPUT JURNAL -->
             <div id="section-input" class="fade-in max-w-2xl mx-auto">
                 <div class="mb-6 lg:mb-8 text-center lg:text-left">
-                    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">My Mine Gueh Wulandari
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">Formulir E-Kinerja
                     </h1>
-                    <p class="text-slate-500 mt-1 text-sm sm:text-base">Catat aktivitas hari ini ya sayang, semangat. i love u!</p>
+                    <p class="text-slate-500 mt-1 text-sm sm:text-base">Catat aktivitas kehumasan Anda hari ini.</p>
                 </div>
 
                 <div
@@ -548,6 +548,7 @@
                                     </th>
                                     <th scope="col" class="px-4 py-3 font-bold min-w-[200px]">Rencana Hasil Kerja</th>
                                     <th scope="col" class="px-4 py-3 font-bold min-w-[250px]">Realisasi</th>
+                                    <th scope="col" class="px-4 py-3 font-bold text-center">Volume & Bukti</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBodyWfa">
@@ -1002,55 +1003,110 @@
         }
 
         let currentData = [];
+        function sortEkinerjaData(data) {
+            data.sort((a, b) => {
+                if (a.tanggal < b.tanggal) return -1;
+                if (a.tanggal > b.tanggal) return 1;
+                // Jika tanggal sama, urutkan berdasarkan SKP
+                if (a.skp < b.skp) return -1;
+                if (a.skp > b.skp) return 1;
+                return 0;
+            });
+            return data;
+        }
 
-        function loadData() {
+        let globalRawData = null;
+
+        function loadData(forceRefresh = false) {
             var tbody = document.getElementById("tableBody");
+            var tbodyWfa = document.getElementById("tableBodyWfa");
+
+            if (!globalRawData || forceRefresh) {
+                // Tampilkan skeleton hanya saat benar-benar ngeload dari server
+                const skeletonMain = `
+                    <tr class="animate-pulse border-b border-slate-100">
+                        <td class="px-4 py-4"><div class="h-4 bg-slate-200 rounded w-6 mx-auto"></div></td>
+                        <td class="px-4 py-4"><div class="h-4 bg-slate-200 rounded w-24 mx-auto"></div></td>
+                        <td class="px-4 py-4"><div class="h-4 bg-slate-200 rounded w-3/4"></div></td>
+                        <td class="px-4 py-4"><div class="h-4 bg-slate-200 rounded w-full"></div></td>
+                        <td class="px-4 py-4"><div class="h-6 bg-slate-200 rounded w-16 mx-auto"></div></td>
+                    </tr>
+                `.repeat(4);
+                
+                const skeletonWfa = `
+                    <tr class="animate-pulse border-b border-slate-100">
+                        <td class="px-4 py-4"><div class="h-4 bg-slate-200 rounded w-6 mx-auto"></div></td>
+                        <td class="px-4 py-4"><div class="h-4 bg-slate-200 rounded w-24 mx-auto"></div></td>
+                        <td class="px-4 py-4"><div class="h-4 bg-slate-200 rounded w-12 mx-auto"></div></td>
+                        <td class="px-4 py-4"><div class="h-4 bg-slate-200 rounded w-12 mx-auto"></div></td>
+                        <td class="px-4 py-4"><div class="h-4 bg-slate-200 rounded w-3/4"></div></td>
+                        <td class="px-4 py-4"><div class="h-4 bg-slate-200 rounded w-full"></div></td>
+                    </tr>
+                `.repeat(4);
+
+                tbody.innerHTML = skeletonMain;
+                if (tbodyWfa) tbodyWfa.innerHTML = skeletonWfa;
+
+                if (GAS_API_URL && GAS_API_URL !== "ISI_DENGAN_URL_WEB_APP_ANDA_DISINI") {
+                    let cached = localStorage.getItem('cached_api_data_all');
+                    if (cached) {
+                        try {
+                            globalRawData = JSON.parse(cached);
+                            applyFilters();
+                        } catch (e) {}
+                    }
+
+                    const url = new URL(GAS_API_URL);
+                    url.searchParams.append('action', 'getHistory');
+                    url.searchParams.append('bulan', 'Semua');
+                    url.searchParams.append('skp', 'Semua');
+
+                    fetch(url)
+                        .then(response => {
+                            if (!response.ok) throw new Error("Network response was not ok");
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (!Array.isArray(data) || (data.length > 0 && data[0].error)) {
+                                throw new Error(data.error || "Data dari server tidak valid");
+                            }
+                            localStorage.setItem('cached_api_data_all', JSON.stringify(data));
+                            globalRawData = data;
+                            applyFilters();
+                        })
+                        .catch(error => {
+                            console.warn("Gagal memuat data dari server, menggunakan dummy:", error);
+                            globalRawData = dummyDataEkinerja;
+                            applyFilters();
+                        });
+                } else {
+                    setTimeout(() => {
+                        globalRawData = dummyDataEkinerja;
+                        applyFilters();
+                    }, 400);
+                }
+            } else {
+                applyFilters();
+            }
+        }
+
+        function applyFilters() {
+            if (!globalRawData) return;
+            
             var filterBulan = document.getElementById("filterBulan").value;
             var filterSkp = document.getElementById("filterSkpDashboard").value;
+            
+            let filteredMain = globalRawData.filter(item => {
+                let matchBulan = filterBulan === 'Semua' || item.tanggal.split('-')[1] === filterBulan;
+                let matchSkp = filterSkp === 'Semua' || item.skp === filterSkp;
+                return matchBulan && matchSkp;
+            });
+            
+            currentData = sortEkinerjaData(filteredMain);
+            renderTable(currentData);
 
-            tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500"><svg class="animate-spin h-6 w-6 text-indigo-500 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Memuat...</td></tr>`;
-
-            if (GAS_API_URL && GAS_API_URL !== "ISI_DENGAN_URL_WEB_APP_ANDA_DISINI") {
-                const url = new URL(GAS_API_URL);
-                url.searchParams.append('action', 'getHistory');
-                url.searchParams.append('bulan', filterBulan);
-                url.searchParams.append('skp', filterSkp);
-
-                fetch(url)
-                    .then(response => {
-                        if (!response.ok) throw new Error("Network response was not ok");
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (!Array.isArray(data) || (data.length > 0 && data[0].error)) {
-                            throw new Error(data.error || "Data dari server tidak valid");
-                        }
-                        currentData = data;
-                        renderTable(data);
-                        renderTableWfa(data);
-                    })
-                    .catch(error => {
-                        console.warn("Gagal memuat data dari server, menggunakan dummy:", error);
-                        let filtered = dummyDataEkinerja.filter(item => {
-                            let matchBulan = filterBulan === 'Semua' || item.tanggal.split('-')[1] === filterBulan;
-                            let matchSkp = filterSkp === 'Semua' || item.skp === filterSkp;
-                            return matchBulan && matchSkp;
-                        });
-                        currentData = filtered;
-                        renderTable(filtered);
-                    });
-            } else {
-                setTimeout(() => {
-                    let filtered = dummyDataEkinerja.filter(item => {
-                        let matchBulan = filterBulan === 'Semua' || item.tanggal.split('-')[1] === filterBulan;
-                        let matchSkp = filterSkp === 'Semua' || item.skp === filterSkp;
-                        return matchBulan && matchSkp;
-                    });
-                    currentData = filtered;
-                    renderTable(filtered);
-                    renderTableWfa(filtered);
-                }, 400);
-            }
+            let sortedRaw = sortEkinerjaData([...globalRawData]);
+            renderTableWfa(sortedRaw);
         }
 
         function renderTable(data) {
@@ -1076,9 +1132,12 @@
             grouped.forEach(group => {
                 let rowSpan = group.items.length;
                 group.items.forEach((item, index) => {
-                    let evidenceHtml = item.type === 'link'
-                        ? `<a href="${item.evidence}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-indigo-100 transition-colors">Tautan</a>`
-                        : `<a href="${item.evidence}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">File</a>`;
+                    let evUrl = item.evidence_url || item.evidence;
+                    let isLink = item.tipe_evidence === 'Tautan' || item.type === 'link';
+                    
+                    let evidenceHtml = isLink
+                        ? `<a href="${evUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-indigo-100 transition-colors">Tautan</a>`
+                        : `<a href="${evUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">File</a>`;
 
                     let tr = document.createElement("tr");
                     tr.className = "border-b border-slate-100 hover:bg-slate-50/50 transition-colors";
@@ -1091,7 +1150,7 @@
                     html += `
                         <td class="px-3 sm:px-4 py-3 text-xs" title="${item.deskripsi}"><div class="line-clamp-2 sm:line-clamp-none">${item.deskripsi}</div></td>
                         <td class="px-3 sm:px-4 py-3 text-center font-semibold text-slate-700">${item.kuantitas}</td>
-                        <td class="px-3 sm:px-4 py-3 text-center">${evidenceHtml}</td>`;
+                        <td class="px-3 sm:px-4 py-3 text-center">${evUrl && evUrl !== '#' ? evidenceHtml : '-'}</td>`;
 
                     tr.innerHTML = html;
                     tbody.appendChild(tr);
@@ -1102,7 +1161,6 @@
         function renderTableWfa(data) {
             var tbody = document.getElementById("tableBodyWfa");
             if (!tbody) return;
-            tbody.innerHTML = "";
 
             var filterBulan = document.getElementById("filterBulanWfa") ? document.getElementById("filterBulanWfa").value : 'Semua';
             let wfaData = data.filter(item => item.tipe_kerja === 'WFA');
@@ -1115,19 +1173,51 @@
                 tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 font-medium">Tidak ada data WFA.</td></tr>`;
                 return;
             }
+            
+            tbody.innerHTML = "";
 
-            wfaData.forEach((item, index) => {
-                let tr = document.createElement("tr");
-                tr.className = "border-b border-slate-100 hover:bg-slate-50/50 transition-colors";
-                tr.innerHTML = `
-                    <td class="px-4 py-3 align-top text-center font-medium">${index + 1}</td>
-                    <td class="px-4 py-3 align-top font-medium whitespace-nowrap">${item.tanggal}</td>
-                    <td class="px-4 py-3 align-top text-center">${formatTimeString(item.jam_masuk)}</td>
-                    <td class="px-4 py-3 align-top text-center">${formatTimeString(item.jam_pulang)}</td>
-                    <td class="px-4 py-3 align-top font-medium text-slate-800">${item.skp}</td>
-                    <td class="px-4 py-3 align-top text-slate-500">${item.deskripsi}</td>
-                `;
-                tbody.appendChild(tr);
+            // Group data by Tanggal
+            let groupedWfa = [];
+            wfaData.forEach(item => {
+                let key = item.tanggal;
+                let group = groupedWfa.find(g => g.key === key);
+                if (!group) {
+                    group = { key: key, tanggal: item.tanggal, jam_masuk: item.jam_masuk, jam_pulang: item.jam_pulang, items: [] };
+                    groupedWfa.push(group);
+                }
+                group.items.push(item);
+            });
+
+            let no = 1;
+            groupedWfa.forEach(group => {
+                let rowSpan = group.items.length;
+                group.items.forEach((item, index) => {
+                    let tr = document.createElement("tr");
+                    tr.className = "border-b border-slate-100 hover:bg-slate-50/50 transition-colors";
+                    
+                    let html = "";
+                    if (index === 0) {
+                        html += `<td rowspan="${rowSpan}" class="px-3 sm:px-4 py-3 align-top text-center font-medium border-r border-slate-100 bg-slate-50/30">${no++}</td>`;
+                        html += `<td rowspan="${rowSpan}" class="px-3 sm:px-4 py-3 align-top font-medium whitespace-nowrap border-r border-slate-100 bg-slate-50/30">${group.tanggal}</td>`;
+                        html += `<td rowspan="${rowSpan}" class="px-3 sm:px-4 py-3 align-top text-center border-r border-slate-100 bg-slate-50/30">${formatTimeString(group.jam_masuk)}</td>`;
+                        html += `<td rowspan="${rowSpan}" class="px-3 sm:px-4 py-3 align-top text-center border-r border-slate-100 bg-slate-50/30">${formatTimeString(group.jam_pulang)}</td>`;
+                    }
+                    
+                    let evUrl = item.evidence_url || item.evidence;
+                    let isLink = item.tipe_evidence === 'Tautan' || item.type === 'link';
+                    
+                    let evidenceHtml = isLink
+                        ? `<a href="${evUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-indigo-100 transition-colors">Tautan</a>`
+                        : `<a href="${evUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">File</a>`;
+
+                    html += `
+                        <td class="px-3 sm:px-4 py-3 align-top font-medium text-slate-800">${item.skp}</td>
+                        <td class="px-3 sm:px-4 py-3 align-top text-slate-500">${item.deskripsi}</td>
+                        <td class="px-3 sm:px-4 py-3 align-top text-center font-semibold text-slate-700">${item.kuantitas} <div class="mt-1">${evUrl && evUrl !== '#' ? evidenceHtml : '-'}</div></td>
+                    `;
+                    tr.innerHTML = html;
+                    tbody.appendChild(tr);
+                });
             });
         }
 
@@ -1160,7 +1250,7 @@
 
                     doc.setFontSize(11);
                     doc.setFont("helvetica", "normal");
-                    let labelX = 14, colonX = 42, valueX = 45;
+                    let labelX = 14, colonX = 45, valueX = 48;
 
                     doc.text("Nama Lengkap", labelX, 35); doc.text(":", colonX, 35); doc.text("Yuyun Wulandari", valueX, 35);
                     doc.text("NIP", labelX, 41); doc.text(":", colonX, 41); doc.text("199207012020122008", valueX, 41);
@@ -1194,17 +1284,19 @@
 
                         let no = 1;
                         pdfGrouped.forEach(group => {
-                            let rowSpan = group.items.length;
+                            let len = group.items.length;
                             group.items.forEach((item, index) => {
                                 let evUrl = item.evidence_url || item.evidence;
-                                let volumeText = item.kuantitas + (evUrl && evUrl !== '#' ? ' (Lihat Bukti)' : '');
-                                let evidenceObj = { content: volumeText, linkURL: evUrl !== '#' ? evUrl : null };
+                                let evidenceObj = { 
+                                    content: (evUrl && evUrl !== '#') ? evUrl : item.kuantitas, 
+                                    styles: (evUrl && evUrl !== '#') ? { fontSize: 6.5, textColor: [37, 99, 235], halign: 'left' } : { halign: 'center' } 
+                                };
 
                                 if (index === 0) {
                                     tableBody.push([
-                                        { rowSpan: rowSpan, content: no++, styles: { valign: 'middle', halign: 'center' } },
-                                        { rowSpan: rowSpan, content: group.tanggal, styles: { valign: 'middle', halign: 'center' } },
-                                        { rowSpan: rowSpan, content: group.skp, styles: { valign: 'middle' } },
+                                        { rowSpan: len, content: String(no++), styles: { valign: 'middle', halign: 'center' } },
+                                        { rowSpan: len, content: group.tanggal, styles: { valign: 'middle', halign: 'center' } },
+                                        { rowSpan: len, content: group.skp, styles: { valign: 'middle' } },
                                         item.deskripsi,
                                         evidenceObj
                                     ]);
@@ -1224,34 +1316,25 @@
                         head: [['No', 'Tanggal', 'Butir Kegiatan SKP', 'Deskripsi / Output', 'Volume & Bukti']],
                         body: tableBody,
                         theme: 'grid',
-                        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' }, // Slate-800 for premium modern look
+                        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', halign: 'center', valign: 'middle' }, // Slate-800 for premium modern look
                         alternateRowStyles: { fillColor: [248, 250, 252] }, // Slate-50 for subtle alternating rows
-                        styles: { fontSize: 9, cellPadding: 4, lineColor: [226, 232, 240], lineWidth: 0.1 },
+                        styles: { fontSize: 9, cellPadding: 2, lineColor: [226, 232, 240], lineWidth: 0.1 },
+                        rowPageBreak: 'auto',
                         columnStyles: {
-                            0: { cellWidth: 10, halign: 'center' },
+                            0: { cellWidth: 15, halign: 'center' },
                             1: { cellWidth: 25, halign: 'center' },
-                            4: { cellWidth: 30, halign: 'center' }
+                            4: { cellWidth: 35, halign: 'center' }
                         },
                         didParseCell: function (data) {
-                            if (data.section === 'body' && data.column.index === 4) {
-                                if (data.cell.raw && data.cell.raw.linkURL) {
-                                    data.cell.styles.textColor = [0, 0, 255]; // Make text blue to indicate link
-                                    data.cell.styles.fontStyle = 'underline';
-                                }
-                            }
-                        },
-                        didDrawCell: function (data) {
-                            if (data.section === 'body' && data.column.index === 4) {
-                                if (data.cell.raw && data.cell.raw.linkURL) {
-                                    doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: data.cell.raw.linkURL });
-                                }
-                            }
+                            // Let auto-table handle line wrapping natively.
+                            // We rely on PDF reader's auto link detection for raw URLs.
                         }
                     });
 
-                    // Trigger Download
-                    doc.save(`Laporan_Ekinerja_${namaBulan}.pdf`);
-
+                    // Trigger Native Print Dialog
+                    doc.autoPrint();
+                    triggerPrintDialog(doc.output('bloburl'));
+                    
                     btn.innerHTML = originalContent; btn.disabled = false;
                 }, 1000);
             }
@@ -1283,56 +1366,121 @@
 
             setTimeout(() => {
                 const { jsPDF } = window.jspdf;
-                const doc = new jsPDF('l', 'pt', 'a4'); // landscape
+                const doc = new jsPDF('p', 'pt', 'a4'); // portrait
 
                 doc.setFontSize(14);
                 doc.setFont("helvetica", "bold");
-                doc.text("LAPORAN PELAKSANAAN TUGAS WORK FROM ANYWHERE (WFA)", 420, 30, { align: 'center' });
+                doc.text("LAPORAN PELAKSANAAN TUGAS WORK FROM ANYWHERE (WFA)", 297, 30, { align: 'center' });
 
                 doc.setFontSize(10);
                 doc.setFont("helvetica", "normal");
 
-                let labelX = 14, colonX = 42, valueX = 45;
-                doc.text("Nama Lengkap", labelX, 50); doc.text(":", colonX, 50); doc.text("Yuyun Wulandari", valueX, 50);
-                doc.text("NIP", labelX, 65); doc.text(":", colonX, 65); doc.text("199207012020122008", valueX, 65);
-                doc.text("Jabatan", labelX, 80); doc.text(":", colonX, 80); doc.text("Pranata Humas Ahli Pertama", valueX, 80);
-                doc.text("Pangkat/Gol", labelX, 95); doc.text(":", colonX, 95); doc.text("Penata Muda Tk. I/IIIb", valueX, 95);
-                doc.text("Unit Kerja", labelX, 110); doc.text(":", colonX, 110); doc.text("Sekretariat Direktorat Jenderal Pendidikan Islam", valueX, 110);
+                let labelX = 40, colonX = 140, valueX = 150;
+                doc.text("Nama Lengkap", labelX, 75); doc.text(":", colonX, 75); doc.text("Yuyun Wulandari", valueX, 75);
+                doc.text("NIP", labelX, 90); doc.text(":", colonX, 90); doc.text("199207012020122008", valueX, 90);
+                doc.text("Jabatan", labelX, 105); doc.text(":", colonX, 105); doc.text("Pranata Humas Ahli Pertama", valueX, 105);
+                doc.text("Pangkat/Gol", labelX, 120); doc.text(":", colonX, 120); doc.text("Penata Muda Tk. I/IIIb", valueX, 120);
+                doc.text("Unit Kerja", labelX, 135); doc.text(":", colonX, 135); doc.text("Sekretariat Direktorat Jenderal Pendidikan Islam", valueX, 135);
 
                 let namaBulan = filterBulan !== "Semua" ? document.getElementById("filterBulanWfa").options[document.getElementById("filterBulanWfa").selectedIndex].text : "Semua Bulan";
-                doc.text("Bulan", labelX, 125); doc.text(":", colonX, 125); doc.text(namaBulan + " 2026", valueX, 125);
+                doc.text("Bulan", labelX, 150); doc.text(":", colonX, 150); doc.text(namaBulan + " 2026", valueX, 150);
+
+                let pdfGroupedWfa = [];
+                wfaData.forEach(item => {
+                    let key = item.tanggal;
+                    let group = pdfGroupedWfa.find(g => g.key === key);
+                    if (!group) {
+                        group = { key: key, tanggal: item.tanggal, jam_masuk: item.jam_masuk, jam_pulang: item.jam_pulang, items: [] };
+                        pdfGroupedWfa.push(group);
+                    }
+                    group.items.push(item);
+                });
 
                 let tableBody = [];
                 let no = 1;
+                pdfGroupedWfa.forEach(group => {
+                    let len = group.items.length;
+                    group.items.forEach((item, index) => {
+                        let evUrl = item.evidence_url || item.evidence;
+                        let evidenceObj = { 
+                            content: (evUrl && evUrl !== '#') ? evUrl : item.kuantitas, 
+                            styles: (evUrl && evUrl !== '#') ? { fontSize: 6.5, textColor: [37, 99, 235], halign: 'left' } : { halign: 'center' } 
+                        };
 
-                wfaData.forEach(item => {
-                    tableBody.push([
-                        { content: no++, styles: { halign: 'center', valign: 'middle' } },
-                        { content: item.tanggal, styles: { halign: 'center', valign: 'middle' } },
-                        { content: formatTimeString(item.jam_masuk), styles: { halign: 'center', valign: 'middle' } },
-                        { content: formatTimeString(item.jam_pulang), styles: { halign: 'center', valign: 'middle' } },
-                        item.skp,
-                        item.deskripsi
-                    ]);
+                        if (index === 0) {
+                            tableBody.push([
+                                { rowSpan: len, content: String(no++), styles: { valign: 'middle', halign: 'center' } },
+                                { rowSpan: len, content: group.tanggal, styles: { valign: 'middle', halign: 'center' } },
+                                { rowSpan: len, content: formatTimeString(group.jam_masuk), styles: { valign: 'middle', halign: 'center' } },
+                                { rowSpan: len, content: formatTimeString(group.jam_pulang), styles: { valign: 'middle', halign: 'center' } },
+                                item.skp,
+                                item.deskripsi,
+                                evidenceObj
+                            ]);
+                        } else {
+                            tableBody.push([
+                                item.skp,
+                                item.deskripsi,
+                                evidenceObj
+                            ]);
+                        }
+                    });
                 });
 
                 doc.autoTable({
-                    startY: 140,
-                    head: [['No', 'Tanggal', 'Jam Masuk', 'Jam Pulang', 'Rencana Hasil Kerja', 'Realisasi']],
+                    startY: 180,
+                    margin: { top: 30, right: 30, bottom: 40, left: 30 },
+                    head: [['No', 'Tanggal', 'Jam Masuk', 'Jam Pulang', 'Rencana Hasil Kerja', 'Realisasi', 'Volume & Bukti']],
                     body: tableBody,
                     theme: 'grid',
-                    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+                    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', halign: 'center', valign: 'middle' },
                     alternateRowStyles: { fillColor: [248, 250, 252] },
-                    styles: { fontSize: 9, cellPadding: 4, lineColor: [226, 232, 240], lineWidth: 0.1 },
+                    styles: { fontSize: 9, cellPadding: 6, minCellHeight: 20, lineColor: [226, 232, 240], lineWidth: 0.1 },
+                    rowPageBreak: 'auto',
                     columnStyles: {
                         0: { cellWidth: 25, halign: 'center' },
-                        1: { cellWidth: 70, halign: 'center' },
-                        2: { cellWidth: 70, halign: 'center' },
-                        3: { cellWidth: 70, halign: 'center' }
+                        1: { cellWidth: 55, halign: 'center' },
+                        2: { cellWidth: 50, halign: 'center' },
+                        3: { cellWidth: 50, halign: 'center' },
+                        6: { cellWidth: 60, halign: 'center' }
+                    },
+                    didParseCell: function (data) {
+                        // Relying on native auto-detect
                     }
                 });
 
-                doc.save(`Laporan_WFA_${namaBulan}.pdf`);
+                // --- Tanda Tangan Section ---
+                let finalY = doc.lastAutoTable.finalY + 40; // Spacing below table
+                let pageHeight = doc.internal.pageSize.getHeight();
+                
+                // If there isn't enough space for the signatures, add a new page
+                if (finalY + 115 > pageHeight) {
+                    doc.addPage();
+                    finalY = 50;
+                }
+
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "normal");
+
+                // Kiri (Pegawai)
+                let leftX = 40;
+                doc.text("Pegawai Yang Dinilai,", leftX, finalY);
+                doc.text("Yuyun Wulandari, S.Pd.I", leftX, finalY + 85);
+                doc.text("NIP. 199207012020122008", leftX, finalY + 100);
+
+                // Kanan (Pejabat Penilai)
+                // A4 portrait width is ~595pt. rightX = 380 puts it nicely on the right.
+                let rightX = 380;
+                doc.text("Mengetahui,", rightX, finalY - 15);
+                doc.text("Pejabat Penilai Kerja", rightX, finalY);
+                doc.text("${ttd_pengirim}", rightX, finalY + 42);
+                doc.text("M. Arskal Salim GP", rightX, finalY + 85);
+                doc.text("NIP. 19700901199603", rightX, finalY + 100);
+
+                // Trigger Native Print Dialog
+                doc.autoPrint();
+                triggerPrintDialog(doc.output('bloburl'));
+                
                 btn.innerHTML = originalContent; btn.disabled = false;
             }, 1000);
         }
@@ -1348,6 +1496,20 @@
                         console.log('ServiceWorker registration failed: ', err);
                     });
             });
+        }
+    </script>
+
+    <!-- Print Iframe Container -->
+    <script>
+        function triggerPrintDialog(bloburl) {
+            let iframe = document.getElementById('printIframe');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'printIframe';
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+            }
+            iframe.src = bloburl;
         }
     </script>
 </body>
