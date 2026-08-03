@@ -1,8 +1,6 @@
-const CACHE_NAME = 'jurnal-yuyun-v3';
+const CACHE_NAME = 'jurnal-yuyun-v8';
 const urlsToCache = [
   './',
-  './index.html',
-  './manifest.json',
   './logo.svg'
 ];
 
@@ -11,7 +9,7 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
   );
-  self.skipWaiting(); // Force the waiting service worker to become the active service worker.
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -20,23 +18,33 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName); // Clean up old caches
+            return caches.delete(cacheName);
           }
         })
       );
     })
   );
-  self.clients.claim(); // Claim control immediately for current clients
+  self.clients.claim();
 });
 
+// Network First strategy
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Return cached response if found, otherwise fetch from network
-        return response || fetch(event.request).catch(() => {
-          // Ignore fetch errors to ensure offline capability
+    fetch(event.request).then(response => {
+      // Network success: update cache and return response
+      const responseClone = response.clone();
+      
+      // Only cache same-origin GET requests to prevent API/CORS issues
+      if (event.request.method === 'GET' && event.request.url.startsWith(self.location.origin)) {
+        caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
         });
-      })
+      }
+      
+      return response;
+    }).catch(() => {
+      // Network failure: fallback to cache
+      return caches.match(event.request);
+    })
   );
 });
