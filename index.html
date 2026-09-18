@@ -1032,7 +1032,7 @@
                         <td class="px-4 py-4"><div class="h-6 bg-slate-200 rounded w-16 mx-auto"></div></td>
                     </tr>
                 `.repeat(4);
-                
+
                 const skeletonWfa = `
                     <tr class="animate-pulse border-b border-slate-100">
                         <td class="px-4 py-4"><div class="h-4 bg-slate-200 rounded w-6 mx-auto"></div></td>
@@ -1053,7 +1053,7 @@
                         try {
                             globalRawData = JSON.parse(cached);
                             applyFilters();
-                        } catch (e) {}
+                        } catch (e) { }
                     }
 
                     const url = new URL(GAS_API_URL);
@@ -1092,16 +1092,16 @@
 
         function applyFilters() {
             if (!globalRawData) return;
-            
+
             var filterBulan = document.getElementById("filterBulan").value;
             var filterSkp = document.getElementById("filterSkpDashboard").value;
-            
+
             let filteredMain = globalRawData.filter(item => {
                 let matchBulan = filterBulan === 'Semua' || item.tanggal.split('-')[1] === filterBulan;
                 let matchSkp = filterSkp === 'Semua' || item.skp === filterSkp;
                 return matchBulan && matchSkp;
             });
-            
+
             currentData = sortEkinerjaData(filteredMain);
             renderTable(currentData);
 
@@ -1134,7 +1134,7 @@
                 group.items.forEach((item, index) => {
                     let evUrl = item.evidence_url || item.evidence;
                     let isLink = item.tipe_evidence === 'Tautan' || item.type === 'link';
-                    
+
                     let evidenceHtml = isLink
                         ? `<a href="${evUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-indigo-100 transition-colors">Tautan</a>`
                         : `<a href="${evUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">File</a>`;
@@ -1173,7 +1173,7 @@
                 tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-500 font-medium">Tidak ada data WFA.</td></tr>`;
                 return;
             }
-            
+
             tbody.innerHTML = "";
 
             // Group data by Tanggal
@@ -1194,7 +1194,7 @@
                 group.items.forEach((item, index) => {
                     let tr = document.createElement("tr");
                     tr.className = "border-b border-slate-100 hover:bg-slate-50/50 transition-colors";
-                    
+
                     let html = "";
                     if (index === 0) {
                         html += `<td rowspan="${rowSpan}" class="px-3 sm:px-4 py-3 align-top text-center font-medium border-r border-slate-100 bg-slate-50/30">${no++}</td>`;
@@ -1202,10 +1202,10 @@
                         html += `<td rowspan="${rowSpan}" class="px-3 sm:px-4 py-3 align-top text-center border-r border-slate-100 bg-slate-50/30">${formatTimeString(group.jam_masuk)}</td>`;
                         html += `<td rowspan="${rowSpan}" class="px-3 sm:px-4 py-3 align-top text-center border-r border-slate-100 bg-slate-50/30">${formatTimeString(group.jam_pulang)}</td>`;
                     }
-                    
+
                     let evUrl = item.evidence_url || item.evidence;
                     let isLink = item.tipe_evidence === 'Tautan' || item.type === 'link';
-                    
+
                     let evidenceHtml = isLink
                         ? `<a href="${evUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-indigo-100 transition-colors">Tautan</a>`
                         : `<a href="${evUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">File</a>`;
@@ -1287,9 +1287,9 @@
                             let len = group.items.length;
                             group.items.forEach((item, index) => {
                                 let evUrl = item.evidence_url || item.evidence;
-                                let evidenceObj = { 
-                                    content: (evUrl && evUrl !== '#') ? evUrl : item.kuantitas, 
-                                    styles: (evUrl && evUrl !== '#') ? { fontSize: 6.5, textColor: [37, 99, 235], halign: 'left' } : { halign: 'center' } 
+                                let evidenceObj = {
+                                    content: (evUrl && evUrl !== '#') ? evUrl : item.kuantitas,
+                                    styles: (evUrl && evUrl !== '#') ? { fontSize: 6.5, textColor: [37, 99, 235], halign: 'left' } : { halign: 'center' }
                                 };
 
                                 if (index === 0) {
@@ -1334,7 +1334,7 @@
                     // Trigger Native Print Dialog
                     doc.autoPrint();
                     triggerPrintDialog(doc.output('bloburl'));
-                    
+
                     btn.innerHTML = originalContent; btn.disabled = false;
                 }, 1000);
             }
@@ -1402,9 +1402,9 @@
                     let len = group.items.length;
                     group.items.forEach((item, index) => {
                         let evUrl = item.evidence_url || item.evidence;
-                        let evidenceObj = { 
-                            content: (evUrl && evUrl !== '#') ? evUrl : item.kuantitas, 
-                            styles: (evUrl && evUrl !== '#') ? { fontSize: 6.5, textColor: [37, 99, 235], halign: 'left' } : { halign: 'center' } 
+                        let evidenceObj = {
+                            content: (evUrl && evUrl !== '#') ? evUrl : item.kuantitas,
+                            styles: (evUrl && evUrl !== '#') ? { fontSize: 6.5, textColor: [37, 99, 235], halign: 'left' } : { halign: 'center' }
                         };
 
                         if (index === 0) {
@@ -1452,7 +1452,7 @@
                 // --- Tanda Tangan Section ---
                 let finalY = doc.lastAutoTable.finalY + 40; // Spacing below table
                 let pageHeight = doc.internal.pageSize.getHeight();
-                
+
                 // If there isn't enough space for the signatures, add a new page
                 if (finalY + 115 > pageHeight) {
                     doc.addPage();
@@ -1480,7 +1480,7 @@
                 // Trigger Native Print Dialog
                 doc.autoPrint();
                 triggerPrintDialog(doc.output('bloburl'));
-                
+
                 btn.innerHTML = originalContent; btn.disabled = false;
             }, 1000);
         }
